@@ -15,19 +15,19 @@ function App() {
   const [password, setPassword] = useState('')
   const [authLoading, setAuthLoading] = useState(false)
   const [authError, setAuthError] = useState('')
-  
+
   // プロジェクトデータ関連の状態
   const [projects, setProjects] = useState([])
   const [dataLoading, setDataLoading] = useState(false)
   const [error, setError] = useState('')
-  
+
   // ソート機能の状態
   const [sortConfig, setSortConfig] = useState({ key: 'created_at', direction: 'desc' })
-  
+
   // 表示制御の状態
   const [showAllProjects, setShowAllProjects] = useState(false)
   const [showClientView, setShowClientView] = useState(false)
-  
+
   // フォーム関連の状態
   const [showForm, setShowForm] = useState(false)
   const [formData, setFormData] = useState({
@@ -103,9 +103,9 @@ function App() {
   const showNotification = (message, type = 'info', duration = 3000) => {
     const id = Date.now()
     const notification = { id, message, type }
-    
+
     setNotifications(prev => [...prev, notification])
-    
+
     setTimeout(() => {
       setNotifications(prev => prev.filter(n => n.id !== id))
     }, duration)
@@ -150,25 +150,24 @@ function App() {
   // プロジェクトデータ取得
   const fetchProjects = async () => {
     if (!user) return
-    
+
     setDataLoading(true)
     setError('')
-    
+
     try {
       const { data, error } = await supabase
         .from('projects')
         .select('*')
-        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
-      
+
       if (error) {
         throw error
       }
-      
+
       setProjects(data || [])
     } catch (error) {
       console.error('プロジェクト取得エラー:', error)
-      
+
       let errorMessage = 'プロジェクトデータの取得に失敗しました。'
       if (error.message.includes('network') || error.message.includes('fetch')) {
         errorMessage = 'ネットワークエラーが発生しました。インターネット接続を確認してください。'
@@ -177,7 +176,7 @@ function App() {
       } else if (error.message.includes('permission') || error.message.includes('unauthorized')) {
         errorMessage = 'データアクセス権限がありません。再ログインしてください。'
       }
-      
+
       setError(errorMessage)
       showNotification(errorMessage, 'error', 5000)
     } finally {
@@ -188,28 +187,27 @@ function App() {
   // プロジェクト作成
   const createProject = async (projectData) => {
     if (!user) return false
-    
+
     setDataLoading(true)
     setError('')
-    
+
     try {
       const { data, error } = await supabase
         .from('projects')
         .insert([{
-          ...projectData,
-          user_id: user.id
+          ...projectData
         }])
         .select()
-      
+
       if (error) {
         throw error
       }
-      
+
       // 新しいプロジェクトを既存のリストに追加
       if (data && data.length > 0) {
         setProjects(prevProjects => [data[0], ...prevProjects])
       }
-      
+
       return true
     } catch (error) {
       console.error('プロジェクト作成エラー:', error)
@@ -225,57 +223,56 @@ function App() {
   // プロジェクト削除
   const deleteProject = async (projectId) => {
     if (!user) return false
-    
+
     // 削除対象のプロジェクト情報を取得
     const targetProject = projects.find(p => p.id === projectId)
     if (!targetProject) {
       setError('削除対象のプロジェクトが見つかりません。')
       return false
     }
-    
+
     // 詳細な確認ダイアログ
     const confirmMessage = `以下のプロジェクトを削除してもよろしいですか？\n\n` +
       `客先: ${targetProject.client}\n` +
       `件名: ${targetProject.title}\n` +
       `金額: ${formatCurrency(targetProject.customer_amount)}\n\n` +
       `※この操作は取り消せません。`
-    
+
     if (!window.confirm(confirmMessage)) {
       return false
     }
-    
+
     // 個別の削除ローディング状態を設定
     setLoadingStates(prev => ({
       ...prev,
       deleting: { ...prev.deleting, [projectId]: true }
     }))
     setError('')
-    
+
     try {
       const { error } = await supabase
         .from('projects')
         .delete()
         .eq('id', projectId)
-        .eq('user_id', user.id) // セキュリティのため、user_idも確認
-      
+
       if (error) {
         throw error
       }
-      
+
       // プロジェクトリストから削除
-      setProjects(prevProjects => 
+      setProjects(prevProjects =>
         prevProjects.filter(project => project.id !== projectId)
       )
-      
+
       // 成功メッセージを表示
       const successMessage = `✓ プロジェクト「${targetProject.title}」を削除しました`
       setError('')
       showNotification(successMessage, 'success')
-      
+
       return true
     } catch (error) {
       console.error('プロジェクト削除エラー:', error)
-      
+
       // より詳細なエラーメッセージ
       let errorMessage = 'プロジェクトの削除に失敗しました。'
       if (error.message.includes('permission')) {
@@ -285,7 +282,7 @@ function App() {
       } else if (error.message.includes('not found')) {
         errorMessage = '削除対象のプロジェクトが見つかりません。'
       }
-      
+
       setError(errorMessage)
       return false
     } finally {
@@ -317,7 +314,7 @@ function App() {
         aValue = parseFloat(aValue) || 0
         bValue = parseFloat(bValue) || 0
       }
-      
+
       // 日付フィールドの処理
       if (['submission_date', 'created_at'].includes(sortConfig.key)) {
         aValue = new Date(aValue)
@@ -363,30 +360,30 @@ function App() {
   const toggleClientView = () => {
     const newShowClientView = !showClientView
     setShowClientView(newShowClientView)
-    
+
     // ビュー切り替え時にフォームを閉じる
     if (showForm) {
       setShowForm(false)
       resetForm()
     }
-    
+
     // 成功メッセージをクリア
     setSuccessMessage('')
     setErrorMessage('')
-    
+
     // エラーメッセージをクリア
     setError('')
-    
+
     // ビュー切り替えの成功フィードバック
     const viewName = newShowClientView ? '客先別集計' : 'プロジェクト一覧'
     const tempMessage = `✓ ${viewName}に切り替えました`
-    
+
     // 一時的な成功メッセージを表示
     const successDiv = document.createElement('div')
     successDiv.className = 'fixed top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-md shadow-lg z-50 view-transition'
     successDiv.textContent = tempMessage
     document.body.appendChild(successDiv)
-    
+
     setTimeout(() => {
       if (document.body.contains(successDiv)) {
         document.body.removeChild(successDiv)
@@ -417,14 +414,14 @@ function App() {
   // フォーム入力処理
   const handleFormChange = (e) => {
     const { name, value } = e.target
-    
+
     // 金額フィールドの自動カンマ区切りフォーマット
     if (name === 'net_amount' || name === 'customer_amount') {
       // 数字のみ抽出（全角数字も半角に変換）
       const numericValue = value
         .replace(/[０-９]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xFEE0))
         .replace(/[^\d]/g, '')
-      
+
       // 空文字の場合はそのまま
       if (numericValue === '') {
         setFormData(prev => ({ ...prev, [name]: '' }))
@@ -438,7 +435,7 @@ function App() {
       // その他のフィールドは通常の処理（入力中はtrimしない）
       setFormData(prev => ({ ...prev, [name]: value }))
     }
-    
+
     // エラーをクリア
     if (formErrors[name]) {
       setFormErrors(prev => ({ ...prev, [name]: '' }))
@@ -453,20 +450,20 @@ function App() {
   // フォーム検証
   const validateForm = () => {
     const errors = {}
-    
+
     // 必須フィールドの検証
     if (!formData.client.trim()) {
       errors.client = '客先は必須です'
     } else if (formData.client.trim().length > 100) {
       errors.client = '客先名は100文字以内で入力してください'
     }
-    
+
     if (!formData.title.trim()) {
       errors.title = '件名は必須です'
     } else if (formData.title.trim().length > 200) {
       errors.title = '件名は200文字以内で入力してください'
     }
-    
+
     if (!formData.net_amount.trim()) {
       errors.net_amount = 'ネット金額は必須です'
     } else {
@@ -477,7 +474,7 @@ function App() {
         errors.net_amount = 'ネット金額は99億円以下で入力してください'
       }
     }
-    
+
     if (!formData.customer_amount.trim()) {
       errors.customer_amount = '客出金額は必須です'
     } else {
@@ -488,7 +485,7 @@ function App() {
         errors.customer_amount = '客出金額は99億円以下で入力してください'
       }
     }
-    
+
     if (!formData.submission_date) {
       errors.submission_date = '提出日は必須です'
     } else {
@@ -498,25 +495,25 @@ function App() {
       oneYearAgo.setFullYear(today.getFullYear() - 1)
       const oneYearLater = new Date()
       oneYearLater.setFullYear(today.getFullYear() + 1)
-      
+
       if (submissionDate < oneYearAgo || submissionDate > oneYearLater) {
         errors.submission_date = '提出日は1年前から1年後の範囲で入力してください'
       }
     }
-    
+
     // 任意フィールドの文字数制限
     if (formData.project_number && formData.project_number.length > 50) {
       errors.project_number = '工事番号は50文字以内で入力してください'
     }
-    
+
     if (formData.construction_manager && formData.construction_manager.length > 50) {
       errors.construction_manager = '工事担当者は50文字以内で入力してください'
     }
-    
+
     if (formData.sales_manager && formData.sales_manager.length > 50) {
       errors.sales_manager = '営業担当者は50文字以内で入力してください'
     }
-    
+
     setFormErrors(errors)
     return Object.keys(errors).length === 0
   }
@@ -524,14 +521,14 @@ function App() {
   // フォーム送信処理
   const handleFormSubmit = async (e) => {
     e.preventDefault()
-    
+
     // 検証実行
     if (!validateForm()) {
       // エラーメッセージを表示
       setSuccessMessage('')
       const errorCount = Object.keys(formErrors).length
       setErrorMessage(`❌ 入力エラーが${errorCount}件あります。赤枠のフィールドを確認してください。`)
-      
+
       // 最初のエラーフィールドにフォーカス
       setTimeout(() => {
         const firstErrorField = Object.keys(formErrors)[0]
@@ -545,7 +542,7 @@ function App() {
       }, 100)
       return
     }
-    
+
     // 送信前の最終データ準備
     const projectData = {
       project_number: formData.project_number.trim() || null,
@@ -557,29 +554,29 @@ function App() {
       customer_amount: parseFloat(formData.customer_amount.replace(/,/g, '')),
       submission_date: formData.submission_date
     }
-    
+
     // データ保存実行
     const success = await createProject(projectData)
-    
+
     if (success) {
       // 成功メッセージを表示
       setSuccessMessage('✓ 保存しました')
       setErrorMessage('')
-      
+
       // フォームをクリア
       resetForm()
-      
+
       // フォームを上部にスクロール（成功メッセージを見やすくする）
       const formElement = document.querySelector('form')
       if (formElement) {
         formElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
       }
-      
+
       // 3秒後にメッセージを消去してフォームを閉じる
       setTimeout(() => {
         setSuccessMessage('')
         setShowForm(false)
-        
+
         // テーブルの上部にスクロール（新しく追加されたプロジェクトを見やすくする）
         const tableElement = document.querySelector('table')
         if (tableElement) {
@@ -613,20 +610,20 @@ function App() {
     if (sortConfig.key !== columnKey) {
       return <span className="text-gray-400 ml-1">↕️</span>
     }
-    return sortConfig.direction === 'asc' ? 
-      <span className="text-blue-600 ml-1">↑</span> : 
+    return sortConfig.direction === 'asc' ?
+      <span className="text-blue-600 ml-1">↑</span> :
       <span className="text-blue-600 ml-1">↓</span>
   }
 
   // 客先別集計データの計算
   const calculateClientAggregation = () => {
     const clientMap = new Map()
-    
+
     projects.forEach(project => {
       const client = project.client
       const netAmount = parseFloat(project.net_amount) || 0
       const customerAmount = parseFloat(project.customer_amount) || 0
-      
+
       if (clientMap.has(client)) {
         const existing = clientMap.get(client)
         existing.projectCount += 1
@@ -643,13 +640,13 @@ function App() {
         })
       }
     })
-    
+
     // 平均利益率を計算してソート
     const clientData = Array.from(clientMap.values()).map(data => ({
       ...data,
       averageProfitRate: data.profitRates.reduce((sum, rate) => sum + rate, 0) / data.profitRates.length
     }))
-    
+
     // 客出金額の多い順でソート
     return clientData.sort((a, b) => b.totalCustomerAmount - a.totalCustomerAmount)
   }
@@ -735,8 +732,7 @@ function App() {
             sales_manager: row['営業担当者'] ? String(row['営業担当者']).trim() : null,
             net_amount: netAmount,
             customer_amount: customerAmount,
-            submission_date: submissionDate,
-            user_id: user.id
+            submission_date: submissionDate
           }
 
           validProjects.push(projectData)
@@ -749,7 +745,7 @@ function App() {
       // エラーがある場合は確認
       if (errors.length > 0) {
         const errorMessage = `以下のエラーがあります:\n\n${errors.slice(0, 10).join('\n')}${errors.length > 10 ? `\n\n...他${errors.length - 10}件のエラー` : ''}\n\n有効なデータ（${validProjects.length}件）のみをインポートしますか？`
-        
+
         if (validProjects.length === 0) {
           alert(`インポートできるデータがありません。\n\n${errors.slice(0, 5).join('\n')}${errors.length > 5 ? `\n...他${errors.length - 5}件のエラー` : ''}`)
           return
@@ -763,7 +759,7 @@ function App() {
       // 重複チェック（客先+件名+提出日で判定）
       const duplicates = []
       for (const newProject of validProjects) {
-        const isDuplicate = projects.some(existingProject => 
+        const isDuplicate = projects.some(existingProject =>
           existingProject.client === newProject.client &&
           existingProject.title === newProject.title &&
           existingProject.submission_date === newProject.submission_date
@@ -775,7 +771,7 @@ function App() {
 
       if (duplicates.length > 0) {
         const duplicateMessage = `以下のプロジェクトは既に存在します:\n\n${duplicates.slice(0, 5).join('\n')}${duplicates.length > 5 ? `\n...他${duplicates.length - 5}件` : ''}\n\n重複を含めてインポートしますか？`
-        
+
         if (!confirm(duplicateMessage)) {
           return
         }
@@ -809,7 +805,7 @@ function App() {
 
     } catch (error) {
       console.error('Excelインポートエラー:', error)
-      
+
       let errorMessage = 'Excelファイルのインポートに失敗しました。'
       if (error.message.includes('network')) {
         errorMessage = 'ネットワークエラーが発生しました。再度お試しください。'
@@ -818,7 +814,7 @@ function App() {
       } else if (error.message) {
         errorMessage = `インポートエラー: ${error.message}`
       }
-      
+
       showNotification(errorMessage, 'error', 5000)
       setImportResults({
         success: false,
@@ -853,7 +849,7 @@ function App() {
       const exportData = projects.map(project => {
         const profitRate = calculateProfitRate(project.customer_amount, project.net_amount)
         const daysPassed = calculateDaysPassed(project.submission_date)
-        
+
         return {
           '工事番号': project.project_number || '',
           '客先': project.client,
@@ -912,7 +908,7 @@ function App() {
         '合計客出金額': data.totalCustomerAmount,
         '平均利益率(%)': parseFloat(data.averageProfitRate.toFixed(1))
       }))
-      
+
       if (clientData.length > 0) {
         const clientWorksheet = XLSX.utils.json_to_sheet(clientData)
         clientWorksheet['!cols'] = [
@@ -943,7 +939,7 @@ function App() {
       successDiv.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-md shadow-lg z-50'
       successDiv.textContent = `✓ ${fileName} をダウンロードしました`
       document.body.appendChild(successDiv)
-      
+
       setTimeout(() => {
         if (document.body.contains(successDiv)) {
           document.body.removeChild(successDiv)
@@ -952,18 +948,18 @@ function App() {
 
     } catch (error) {
       console.error('Excelエクスポートエラー:', error)
-      
+
       // ローディング表示を削除
       if (document.body.contains(loadingDiv)) {
         document.body.removeChild(loadingDiv)
       }
-      
+
       // エラーメッセージを表示
       const errorDiv = document.createElement('div')
       errorDiv.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-md shadow-lg z-50'
       errorDiv.textContent = '❌ Excelファイルのエクスポートに失敗しました'
       document.body.appendChild(errorDiv)
-      
+
       setTimeout(() => {
         if (document.body.contains(errorDiv)) {
           document.body.removeChild(errorDiv)
@@ -1005,7 +1001,7 @@ function App() {
         <div className="min-h-screen flex items-center justify-center">
           <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
             <h1 className="text-2xl font-bold text-center mb-6">工事見積管理システム</h1>
-            
+
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
@@ -1021,7 +1017,7 @@ function App() {
                   placeholder="example@email.com"
                 />
               </div>
-              
+
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
                   パスワード
@@ -1176,11 +1172,10 @@ function App() {
                       {/* 登録ボタン */}
                       <button
                         onClick={toggleForm}
-                        className={`px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
-                          showForm 
-                            ? 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500' 
+                        className={`px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${showForm
+                            ? 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500'
                             : 'bg-purple-600 text-white hover:bg-purple-700 focus:ring-purple-500'
-                        } focus:outline-none focus:ring-2 focus:ring-offset-2`}
+                          } focus:outline-none focus:ring-2 focus:ring-offset-2`}
                         aria-label={showForm ? 'プロジェクト登録をキャンセル' : '新規プロジェクト登録フォームを開く'}
                         aria-expanded={showForm}
                       >
@@ -1190,13 +1185,11 @@ function App() {
                       {/* 客先別集計表示ボタン */}
                       <button
                         onClick={toggleClientView}
-                        className={`inline-flex items-center px-3 py-2 rounded-md text-sm font-medium display-toggle-btn transition-all duration-200 ${
-                          showClientView 
-                            ? 'bg-orange-600 text-white hover:bg-orange-700 shadow-md' 
+                        className={`inline-flex items-center px-3 py-2 rounded-md text-sm font-medium display-toggle-btn transition-all duration-200 ${showClientView
+                            ? 'bg-orange-600 text-white hover:bg-orange-700 shadow-md'
                             : 'bg-indigo-600 text-white hover:bg-indigo-700'
-                        } focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                          showClientView ? 'focus:ring-orange-500' : 'focus:ring-indigo-500'
-                        }`}
+                          } focus:outline-none focus:ring-2 focus:ring-offset-2 ${showClientView ? 'focus:ring-orange-500' : 'focus:ring-indigo-500'
+                          }`}
                         title={`${showClientView ? 'プロジェクト一覧に戻る' : '客先別の集計データを表示'} (Ctrl+Shift+V)`}
                       >
                         <span className="mr-1">
@@ -1209,13 +1202,11 @@ function App() {
                       {!showClientView && (
                         <button
                           onClick={toggleShowAllProjects}
-                          className={`px-3 py-2 rounded-md text-sm font-medium display-toggle-btn ${
-                            showAllProjects 
-                              ? 'bg-green-600 text-white hover:bg-green-700' 
+                          className={`px-3 py-2 rounded-md text-sm font-medium display-toggle-btn ${showAllProjects
+                              ? 'bg-green-600 text-white hover:bg-green-700'
                               : 'bg-gray-600 text-white hover:bg-gray-700'
-                          } focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                            showAllProjects ? 'focus:ring-green-500' : 'focus:ring-gray-500'
-                          }`}
+                            } focus:outline-none focus:ring-2 focus:ring-offset-2 ${showAllProjects ? 'focus:ring-green-500' : 'focus:ring-gray-500'
+                            }`}
                         >
                           {showAllProjects ? '直近20件表示' : '全件表示'}
                         </button>
@@ -1323,12 +1314,11 @@ function App() {
                                 {formatCurrency(clientData.totalCustomerAmount)}
                               </td>
                               <td className="px-2 sm:px-4 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-right">
-                                <span className={`inline-flex items-center ${
-                                  clientData.averageProfitRate >= 120 ? 'profit-high-bg' : 
-                                  clientData.averageProfitRate >= 100 ? 'profit-medium-bg' : 'profit-low-bg'
-                                }`}>
-                                  {clientData.averageProfitRate >= 120 ? '🟢' : 
-                                   clientData.averageProfitRate >= 100 ? '🔵' : '🔴'} {clientData.averageProfitRate.toFixed(1)}%
+                                <span className={`inline-flex items-center ${clientData.averageProfitRate >= 120 ? 'profit-high-bg' :
+                                    clientData.averageProfitRate >= 100 ? 'profit-medium-bg' : 'profit-low-bg'
+                                  }`}>
+                                  {clientData.averageProfitRate >= 120 ? '🟢' :
+                                    clientData.averageProfitRate >= 100 ? '🔵' : '🔴'} {clientData.averageProfitRate.toFixed(1)}%
                                 </span>
                               </td>
                             </tr>
@@ -1339,188 +1329,186 @@ function App() {
                   ) : (
                     /* プロジェクト一覧テーブル */
                     <table className="min-w-full divide-y divide-gray-200 view-transition" role="table" aria-label="プロジェクト一覧テーブル">
-                    {/* モバイル用の注意書き */}
-                    <caption className="sr-only sm:not-sr-only text-sm text-gray-500 py-2 lg:hidden">
-                      横スクロールして全ての列を表示できます
-                    </caption>
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th 
-                          className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px] cursor-pointer hover:bg-gray-100 transition-colors duration-150"
-                          onClick={() => handleSort('project_number')}
-                        >
-                          <div className="flex items-center">
-                            工事番号
-                            {getSortIcon('project_number')}
-                          </div>
-                        </th>
-                        <th 
-                          className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px] cursor-pointer hover:bg-gray-100 transition-colors duration-150"
-                          onClick={() => handleSort('client')}
-                        >
-                          <div className="flex items-center">
-                            客先
-                            {getSortIcon('client')}
-                          </div>
-                        </th>
-                        <th 
-                          className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[150px] cursor-pointer hover:bg-gray-100 transition-colors duration-150"
-                          onClick={() => handleSort('title')}
-                        >
-                          <div className="flex items-center">
-                            件名
-                            {getSortIcon('title')}
-                          </div>
-                        </th>
-                        <th 
-                          className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px] cursor-pointer hover:bg-gray-100 transition-colors duration-150"
-                          onClick={() => handleSort('construction_manager')}
-                        >
-                          <div className="flex items-center">
-                            工事担当者
-                            {getSortIcon('construction_manager')}
-                          </div>
-                        </th>
-                        <th 
-                          className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px] cursor-pointer hover:bg-gray-100 transition-colors duration-150"
-                          onClick={() => handleSort('sales_manager')}
-                        >
-                          <div className="flex items-center">
-                            営業担当者
-                            {getSortIcon('sales_manager')}
-                          </div>
-                        </th>
-                        <th 
-                          className="px-2 sm:px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px] cursor-pointer hover:bg-gray-100 transition-colors duration-150"
-                          onClick={() => handleSort('net_amount')}
-                        >
-                          <div className="flex items-center justify-end">
-                            ネット金額
-                            {getSortIcon('net_amount')}
-                          </div>
-                        </th>
-                        <th 
-                          className="px-2 sm:px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px] cursor-pointer hover:bg-gray-100 transition-colors duration-150"
-                          onClick={() => handleSort('customer_amount')}
-                        >
-                          <div className="flex items-center justify-end">
-                            客出金額
-                            {getSortIcon('customer_amount')}
-                          </div>
-                        </th>
-                        <th 
-                          className="px-2 sm:px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px] cursor-pointer hover:bg-gray-100 transition-colors duration-150"
-                          onClick={() => handleSort('profit_rate')}
-                        >
-                          <div className="flex items-center justify-end">
-                            利益率
-                            {getSortIcon('profit_rate')}
-                          </div>
-                        </th>
-                        <th 
-                          className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px] cursor-pointer hover:bg-gray-100 transition-colors duration-150"
-                          onClick={() => handleSort('submission_date')}
-                        >
-                          <div className="flex items-center">
-                            提出日
-                            {getSortIcon('submission_date')}
-                          </div>
-                        </th>
-                        <th 
-                          className="px-2 sm:px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px] cursor-pointer hover:bg-gray-100 transition-colors duration-150"
-                          onClick={() => handleSort('days_passed')}
-                        >
-                          <div className="flex items-center justify-end">
-                            経過日数
-                            {getSortIcon('days_passed')}
-                          </div>
-                        </th>
-                        <th className="px-2 sm:px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[60px]">
-                          操作
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {getDisplayProjects().length === 0 ? (
+                      {/* モバイル用の注意書き */}
+                      <caption className="sr-only sm:not-sr-only text-sm text-gray-500 py-2 lg:hidden">
+                        横スクロールして全ての列を表示できます
+                      </caption>
+                      <thead className="bg-gray-50">
                         <tr>
-                          <td colSpan="11" className="px-4 py-8 text-center text-gray-500">
-                            {projects.length === 0 
-                              ? 'プロジェクトが登録されていません' 
-                              : 'フィルター条件に一致するプロジェクトがありません'
-                            }
-                          </td>
+                          <th
+                            className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px] cursor-pointer hover:bg-gray-100 transition-colors duration-150"
+                            onClick={() => handleSort('project_number')}
+                          >
+                            <div className="flex items-center">
+                              工事番号
+                              {getSortIcon('project_number')}
+                            </div>
+                          </th>
+                          <th
+                            className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px] cursor-pointer hover:bg-gray-100 transition-colors duration-150"
+                            onClick={() => handleSort('client')}
+                          >
+                            <div className="flex items-center">
+                              客先
+                              {getSortIcon('client')}
+                            </div>
+                          </th>
+                          <th
+                            className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[150px] cursor-pointer hover:bg-gray-100 transition-colors duration-150"
+                            onClick={() => handleSort('title')}
+                          >
+                            <div className="flex items-center">
+                              件名
+                              {getSortIcon('title')}
+                            </div>
+                          </th>
+                          <th
+                            className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px] cursor-pointer hover:bg-gray-100 transition-colors duration-150"
+                            onClick={() => handleSort('construction_manager')}
+                          >
+                            <div className="flex items-center">
+                              工事担当者
+                              {getSortIcon('construction_manager')}
+                            </div>
+                          </th>
+                          <th
+                            className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px] cursor-pointer hover:bg-gray-100 transition-colors duration-150"
+                            onClick={() => handleSort('sales_manager')}
+                          >
+                            <div className="flex items-center">
+                              営業担当者
+                              {getSortIcon('sales_manager')}
+                            </div>
+                          </th>
+                          <th
+                            className="px-2 sm:px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px] cursor-pointer hover:bg-gray-100 transition-colors duration-150"
+                            onClick={() => handleSort('net_amount')}
+                          >
+                            <div className="flex items-center justify-end">
+                              ネット金額
+                              {getSortIcon('net_amount')}
+                            </div>
+                          </th>
+                          <th
+                            className="px-2 sm:px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px] cursor-pointer hover:bg-gray-100 transition-colors duration-150"
+                            onClick={() => handleSort('customer_amount')}
+                          >
+                            <div className="flex items-center justify-end">
+                              客出金額
+                              {getSortIcon('customer_amount')}
+                            </div>
+                          </th>
+                          <th
+                            className="px-2 sm:px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px] cursor-pointer hover:bg-gray-100 transition-colors duration-150"
+                            onClick={() => handleSort('profit_rate')}
+                          >
+                            <div className="flex items-center justify-end">
+                              利益率
+                              {getSortIcon('profit_rate')}
+                            </div>
+                          </th>
+                          <th
+                            className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px] cursor-pointer hover:bg-gray-100 transition-colors duration-150"
+                            onClick={() => handleSort('submission_date')}
+                          >
+                            <div className="flex items-center">
+                              提出日
+                              {getSortIcon('submission_date')}
+                            </div>
+                          </th>
+                          <th
+                            className="px-2 sm:px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px] cursor-pointer hover:bg-gray-100 transition-colors duration-150"
+                            onClick={() => handleSort('days_passed')}
+                          >
+                            <div className="flex items-center justify-end">
+                              経過日数
+                              {getSortIcon('days_passed')}
+                            </div>
+                          </th>
+                          <th className="px-2 sm:px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[60px]">
+                            操作
+                          </th>
                         </tr>
-                      ) : (
-                        getDisplayProjects().map((project) => {
-                          const profitRate = calculateProfitRate(project.customer_amount, project.net_amount)
-                          const daysPassed = calculateDaysPassed(project.submission_date)
-                          
-                          return (
-                            <tr key={project.id} className="table-row">
-                              <td className="px-2 sm:px-4 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900">
-                                {project.project_number || '-'}
-                              </td>
-                              <td className="px-2 sm:px-4 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900 font-medium">
-                                {project.client}
-                              </td>
-                              <td className="px-2 sm:px-4 py-3 sm:py-4 text-xs sm:text-sm text-gray-900 max-w-[150px] sm:max-w-xs truncate" title={project.title}>
-                                {project.title}
-                              </td>
-                              <td className="px-2 sm:px-4 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900">
-                                {project.construction_manager || '-'}
-                              </td>
-                              <td className="px-2 sm:px-4 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900">
-                                {project.sales_manager || '-'}
-                              </td>
-                              <td className="px-2 sm:px-4 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900 text-right font-medium">
-                                {formatCurrency(project.net_amount)}
-                              </td>
-                              <td className="px-2 sm:px-4 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900 text-right font-medium">
-                                {formatCurrency(project.customer_amount)}
-                              </td>
-                              <td className="px-2 sm:px-4 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-right">
-                                <span className={`inline-flex items-center ${
-                                  parseFloat(profitRate) >= 120 ? 'profit-high-bg' : 
-                                  parseFloat(profitRate) >= 100 ? 'profit-medium-bg' : 'profit-low-bg'
-                                }`}>
-                                  {parseFloat(profitRate) >= 120 ? '🟢' : 
-                                   parseFloat(profitRate) >= 100 ? '🔵' : '🔴'} {profitRate}%
-                                </span>
-                              </td>
-                              <td className="px-2 sm:px-4 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900">
-                                {new Date(project.submission_date).toLocaleDateString('ja-JP')}
-                              </td>
-                              <td className="px-2 sm:px-4 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-right">
-                                <span className={`inline-flex items-center ${
-                                  daysPassed <= 14 ? 'days-recent-bg' : 
-                                  daysPassed <= 30 ? 'days-medium-bg' : 'days-old-bg'
-                                }`}>
-                                  {daysPassed <= 14 ? '🟢' : 
-                                   daysPassed <= 30 ? '🟡' : '🔴'} {daysPassed}日
-                                </span>
-                              </td>
-                              <td className="px-2 sm:px-4 py-3 sm:py-4 whitespace-nowrap text-center">
-                                <button
-                                  onClick={() => deleteProject(project.id)}
-                                  disabled={loadingStates.deleting[project.id]}
-                                  className="inline-flex items-center px-2 py-1 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 hover:text-red-800 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed delete-btn transition-all duration-200"
-                                  title={`プロジェクト「${project.title}」を削除`}
-                                >
-                                  {loadingStates.deleting[project.id] && (
-                                    <span className="loading-spinner mr-1">🔄</span>
-                                  )}
-                                  {!loadingStates.deleting[project.id] && (
-                                    <span className="mr-1">🗑️</span>
-                                  )}
-                                  {loadingStates.deleting[project.id] ? '削除中...' : '削除'}
-                                </button>
-                              </td>
-                            </tr>
-                          )
-                        })
-                      )}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {getDisplayProjects().length === 0 ? (
+                          <tr>
+                            <td colSpan="11" className="px-4 py-8 text-center text-gray-500">
+                              {projects.length === 0
+                                ? 'プロジェクトが登録されていません'
+                                : 'フィルター条件に一致するプロジェクトがありません'
+                              }
+                            </td>
+                          </tr>
+                        ) : (
+                          getDisplayProjects().map((project) => {
+                            const profitRate = calculateProfitRate(project.customer_amount, project.net_amount)
+                            const daysPassed = calculateDaysPassed(project.submission_date)
+
+                            return (
+                              <tr key={project.id} className="table-row">
+                                <td className="px-2 sm:px-4 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900">
+                                  {project.project_number || '-'}
+                                </td>
+                                <td className="px-2 sm:px-4 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900 font-medium">
+                                  {project.client}
+                                </td>
+                                <td className="px-2 sm:px-4 py-3 sm:py-4 text-xs sm:text-sm text-gray-900 max-w-[150px] sm:max-w-xs truncate" title={project.title}>
+                                  {project.title}
+                                </td>
+                                <td className="px-2 sm:px-4 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900">
+                                  {project.construction_manager || '-'}
+                                </td>
+                                <td className="px-2 sm:px-4 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900">
+                                  {project.sales_manager || '-'}
+                                </td>
+                                <td className="px-2 sm:px-4 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900 text-right font-medium">
+                                  {formatCurrency(project.net_amount)}
+                                </td>
+                                <td className="px-2 sm:px-4 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900 text-right font-medium">
+                                  {formatCurrency(project.customer_amount)}
+                                </td>
+                                <td className="px-2 sm:px-4 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-right">
+                                  <span className={`inline-flex items-center ${parseFloat(profitRate) >= 120 ? 'profit-high-bg' :
+                                      parseFloat(profitRate) >= 100 ? 'profit-medium-bg' : 'profit-low-bg'
+                                    }`}>
+                                    {parseFloat(profitRate) >= 120 ? '🟢' :
+                                      parseFloat(profitRate) >= 100 ? '🔵' : '🔴'} {profitRate}%
+                                  </span>
+                                </td>
+                                <td className="px-2 sm:px-4 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900">
+                                  {new Date(project.submission_date).toLocaleDateString('ja-JP')}
+                                </td>
+                                <td className="px-2 sm:px-4 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-right">
+                                  <span className={`inline-flex items-center ${daysPassed <= 14 ? 'days-recent-bg' :
+                                      daysPassed <= 30 ? 'days-medium-bg' : 'days-old-bg'
+                                    }`}>
+                                    {daysPassed <= 14 ? '🟢' :
+                                      daysPassed <= 30 ? '🟡' : '🔴'} {daysPassed}日
+                                  </span>
+                                </td>
+                                <td className="px-2 sm:px-4 py-3 sm:py-4 whitespace-nowrap text-center">
+                                  <button
+                                    onClick={() => deleteProject(project.id)}
+                                    disabled={loadingStates.deleting[project.id]}
+                                    className="inline-flex items-center px-2 py-1 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 hover:text-red-800 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed delete-btn transition-all duration-200"
+                                    title={`プロジェクト「${project.title}」を削除`}
+                                  >
+                                    {loadingStates.deleting[project.id] && (
+                                      <span className="loading-spinner mr-1">🔄</span>
+                                    )}
+                                    {!loadingStates.deleting[project.id] && (
+                                      <span className="mr-1">🗑️</span>
+                                    )}
+                                    {loadingStates.deleting[project.id] ? '削除中...' : '削除'}
+                                  </button>
+                                </td>
+                              </tr>
+                            )
+                          })
+                        )}
+                      </tbody>
+                    </table>
                   )}
                 </div>
 
@@ -1536,7 +1524,7 @@ function App() {
                         ) : (
                           <>
                             <p className="text-sm text-gray-600">
-                              {showAllProjects 
+                              {showAllProjects
                                 ? `全 ${projects.length} 件のプロジェクトを表示中`
                                 : `直近 ${Math.min(20, projects.length)} 件を表示中（全 ${projects.length} 件）`
                               }
@@ -1551,17 +1539,17 @@ function App() {
                       </div>
                       {!showClientView && (
                         <p className="text-xs text-gray-500">
-                          ソート: {sortConfig.key === 'created_at' ? '作成日時' : 
-                                  sortConfig.key === 'project_number' ? '工事番号' :
-                                  sortConfig.key === 'client' ? '客先' :
-                                  sortConfig.key === 'title' ? '件名' :
+                          ソート: {sortConfig.key === 'created_at' ? '作成日時' :
+                            sortConfig.key === 'project_number' ? '工事番号' :
+                              sortConfig.key === 'client' ? '客先' :
+                                sortConfig.key === 'title' ? '件名' :
                                   sortConfig.key === 'construction_manager' ? '工事担当者' :
-                                  sortConfig.key === 'sales_manager' ? '営業担当者' :
-                                  sortConfig.key === 'net_amount' ? 'ネット金額' :
-                                  sortConfig.key === 'customer_amount' ? '客出金額' :
-                                  sortConfig.key === 'profit_rate' ? '利益率' :
-                                  sortConfig.key === 'submission_date' ? '提出日' :
-                                  sortConfig.key === 'days_passed' ? '経過日数' : sortConfig.key} 
+                                    sortConfig.key === 'sales_manager' ? '営業担当者' :
+                                      sortConfig.key === 'net_amount' ? 'ネット金額' :
+                                        sortConfig.key === 'customer_amount' ? '客出金額' :
+                                          sortConfig.key === 'profit_rate' ? '利益率' :
+                                            sortConfig.key === 'submission_date' ? '提出日' :
+                                              sortConfig.key === 'days_passed' ? '経過日数' : sortConfig.key}
                           ({sortConfig.direction === 'asc' ? '昇順' : '降順'})
                         </p>
                       )}
@@ -1576,7 +1564,7 @@ function App() {
                   <div className="px-6 py-4 border-b border-gray-200">
                     <h3 className="text-lg font-semibold text-gray-800">新規プロジェクト登録</h3>
                   </div>
-                  
+
                   {/* 成功メッセージ */}
                   {successMessage && (
                     <div className="px-6 py-4 bg-green-50 border-b border-green-200">
@@ -1604,9 +1592,8 @@ function App() {
                           name="project_number"
                           value={formData.project_number}
                           onChange={handleFormChange}
-                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-                            formErrors.project_number ? 'border-red-500' : 'border-gray-300'
-                          }`}
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent ${formErrors.project_number ? 'border-red-500' : 'border-gray-300'
+                            }`}
                           placeholder="例: P2024-001"
                         />
                         {formErrors.project_number && (
@@ -1626,9 +1613,8 @@ function App() {
                           value={formData.client}
                           onChange={handleFormChange}
                           required
-                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-                            formErrors.client ? 'border-red-500' : 'border-gray-300'
-                          }`}
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent ${formErrors.client ? 'border-red-500' : 'border-gray-300'
+                            }`}
                           placeholder="例: 株式会社サンプル"
                         />
                         {formErrors.client && (
@@ -1648,9 +1634,8 @@ function App() {
                           value={formData.title}
                           onChange={handleFormChange}
                           required
-                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-                            formErrors.title ? 'border-red-500' : 'border-gray-300'
-                          }`}
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent ${formErrors.title ? 'border-red-500' : 'border-gray-300'
+                            }`}
                           placeholder="例: オフィスビル改修工事"
                         />
                         {formErrors.title && (
@@ -1669,9 +1654,8 @@ function App() {
                           name="construction_manager"
                           value={formData.construction_manager}
                           onChange={handleFormChange}
-                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-                            formErrors.construction_manager ? 'border-red-500' : 'border-gray-300'
-                          }`}
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent ${formErrors.construction_manager ? 'border-red-500' : 'border-gray-300'
+                            }`}
                           placeholder="例: 田中太郎"
                         />
                         {formErrors.construction_manager && (
@@ -1690,9 +1674,8 @@ function App() {
                           name="sales_manager"
                           value={formData.sales_manager}
                           onChange={handleFormChange}
-                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-                            formErrors.sales_manager ? 'border-red-500' : 'border-gray-300'
-                          }`}
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent ${formErrors.sales_manager ? 'border-red-500' : 'border-gray-300'
+                            }`}
                           placeholder="例: 佐藤花子"
                         />
                         {formErrors.sales_manager && (
@@ -1712,9 +1695,8 @@ function App() {
                           value={formData.net_amount}
                           onChange={handleFormChange}
                           required
-                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-                            formErrors.net_amount ? 'border-red-500' : 'border-gray-300'
-                          }`}
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent ${formErrors.net_amount ? 'border-red-500' : 'border-gray-300'
+                            }`}
                           placeholder="例: 1,000,000"
                         />
                         {formErrors.net_amount && (
@@ -1737,9 +1719,8 @@ function App() {
                           value={formData.customer_amount}
                           onChange={handleFormChange}
                           required
-                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-                            formErrors.customer_amount ? 'border-red-500' : 'border-gray-300'
-                          }`}
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent ${formErrors.customer_amount ? 'border-red-500' : 'border-gray-300'
+                            }`}
                           placeholder="例: 1,200,000"
                         />
                         {formErrors.customer_amount && (
@@ -1762,9 +1743,8 @@ function App() {
                           value={formData.submission_date}
                           onChange={handleFormChange}
                           required
-                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-                            formErrors.submission_date ? 'border-red-500' : 'border-gray-300'
-                          }`}
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent ${formErrors.submission_date ? 'border-red-500' : 'border-gray-300'
+                            }`}
                         />
                         {formErrors.submission_date && (
                           <p className="mt-1 text-sm text-red-600">{formErrors.submission_date}</p>
@@ -1802,12 +1782,11 @@ function App() {
         {notifications.map((notification) => (
           <div
             key={notification.id}
-            className={`px-4 py-2 rounded-md shadow-lg text-white text-sm max-w-sm cursor-pointer transition-all duration-300 ${
-              notification.type === 'error' ? 'bg-red-500' :
-              notification.type === 'success' ? 'bg-green-500' :
-              notification.type === 'warning' ? 'bg-yellow-500' :
-              'bg-blue-500'
-            }`}
+            className={`px-4 py-2 rounded-md shadow-lg text-white text-sm max-w-sm cursor-pointer transition-all duration-300 ${notification.type === 'error' ? 'bg-red-500' :
+                notification.type === 'success' ? 'bg-green-500' :
+                  notification.type === 'warning' ? 'bg-yellow-500' :
+                    'bg-blue-500'
+              }`}
             onClick={() => removeNotification(notification.id)}
           >
             <div className="flex items-center justify-between">
