@@ -2,6 +2,11 @@ import React, { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import { formatCurrency, calculateProfitRate, calculateDaysPassed } from './utils/calculations'
 import * as XLSX from 'xlsx'
+import DeleteButton from './components/DeleteButton'
+import ConfirmationDialog from './components/ConfirmationDialog'
+import NotificationSystem, { createDeleteSuccessNotification, createDeleteErrorNotification } from './components/NotificationSystem'
+import ClientAggregationTable from './components/ClientAggregationTable'
+import { useDeleteWithConfirmation } from './hooks/useEnhancedDelete'
 
 // Initialize Supabase client
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
@@ -53,6 +58,13 @@ function App() {
     exporting: false
   })
   const [notifications, setNotifications] = useState([])
+  
+  // 削除確認ダイアログの状態
+  const [deleteConfirmation, setDeleteConfirmation] = useState({
+    isOpen: false,
+    projectId: null,
+    projectData: null
+  })
 
   useEffect(() => {
     // Check if user is already logged in
@@ -99,21 +111,80 @@ function App() {
     }
   }, [showClientView])
 
-  // 通知を表示する関数
-  const showNotification = (message, type = 'info', duration = 3000) => {
-    const id = Date.now()
-    const notification = { id, message, type }
+  // 通知を表示する関数（拡張版）
+  const showNotification = (notificationOrMessage, type = 'info', duration = 3000) => {
+    let notification;
+    
+    if (typeof notificationOrMessage === 'object') {
+      // 新しい通知オブジェクト形式
+      notification = notificationOrMessage;
+    } else {
+      // 従来の文字列形式（後方互換性）
+      notification = {
+        id: Date.now() + Math.random(),
+        message: notificationOrMessage,
+        type,
+        duration
+      };
+    }
 
     setNotifications(prev => [...prev, notification])
 
-    setTimeout(() => {
-      setNotifications(prev => prev.filter(n => n.id !== id))
-    }, duration)
+    if (notification.duration > 0) {
+      setTimeout(() => {
+        setNotifications(prev => prev.filter(n => n.id !== notification.id))
+      }, notification.duration)
+    }
   }
 
   // 通知を削除する関数
   const removeNotification = (id) => {
     setNotifications(prev => prev.filter(n => n.id !== id))
+  }
+
+  // 削除確認ダイアログを開く
+  const openDeleteConfirmation = (projectId, projectData) => {
+    setDeleteConfirmation({
+      isOpen: true,
+      projectId,
+      projectData
+    })
+  }
+
+  // 削除確認ダイアログを閉じる
+  const closeDeleteConfirmation = () => {
+    setDeleteConfirmation({
+      isOpen: false,
+      projectId: null,
+      projectData: null
+    })
+  }
+
+  // 削除を確認して実行
+  const confirmDelete = async () => {
+    const { projectId, projectData } = deleteConfirmation
+    
+    if (!projectId || !projectData) {
+      console.error('削除対象のプロジェクト情報が不足しています')
+      return false
+    }
+
+    const result = await deleteProject(projectId)
+    
+    if (result) {
+      closeDeleteConfirmation()
+      
+      // 成功通知を表示
+      const notification = createDeleteSuccessNotification(
+        projectData.title,
+        `客先: ${projectData.client}`
+      )
+      showNotification(notification)
+    } else {
+      // エラー通知は deleteProject 内で処理される
+    }
+    
+    return result
   }
 
   // ログイン処理
@@ -1267,65 +1338,14 @@ function App() {
                 {/* テーブル */}
                 <div className="overflow-x-auto table-container">
                   {showClientView ? (
-                    /* 客先別集計テーブル */
-                    <table className="min-w-full divide-y divide-gray-200 view-transition" role="table" aria-label="客先別集計テーブル">
-                      <caption className="sr-only sm:not-sr-only text-sm text-gray-500 py-2 lg:hidden">
-                        横スクロールして全ての列を表示できます
-                      </caption>
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">
-                            客先
-                          </th>
-                          <th className="px-2 sm:px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">
-                            案件数
-                          </th>
-                          <th className="px-2 sm:px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">
-                            合計ネット金額
-                          </th>
-                          <th className="px-2 sm:px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">
-                            合計客出金額
-                          </th>
-                          <th className="px-2 sm:px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">
-                            平均利益率
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {calculateClientAggregation().length === 0 ? (
-                          <tr>
-                            <td colSpan="5" className="px-4 py-8 text-center text-gray-500">
-                              集計データがありません
-                            </td>
-                          </tr>
-                        ) : (
-                          calculateClientAggregation().map((clientData, index) => (
-                            <tr key={clientData.client} className="table-row">
-                              <td className="px-2 sm:px-4 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900 font-medium">
-                                {clientData.client}
-                              </td>
-                              <td className="px-2 sm:px-4 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900 text-right font-medium">
-                                {clientData.projectCount}件
-                              </td>
-                              <td className="px-2 sm:px-4 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900 text-right font-medium">
-                                {formatCurrency(clientData.totalNetAmount)}
-                              </td>
-                              <td className="px-2 sm:px-4 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900 text-right font-medium">
-                                {formatCurrency(clientData.totalCustomerAmount)}
-                              </td>
-                              <td className="px-2 sm:px-4 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-right">
-                                <span className={`inline-flex items-center ${clientData.averageProfitRate >= 120 ? 'profit-high-bg' :
-                                    clientData.averageProfitRate >= 100 ? 'profit-medium-bg' : 'profit-low-bg'
-                                  }`}>
-                                  {clientData.averageProfitRate >= 120 ? '🟢' :
-                                    clientData.averageProfitRate >= 100 ? '🔵' : '🔴'} {clientData.averageProfitRate.toFixed(1)}%
-                                </span>
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
+                    /* 客先別集計テーブル（拡張版） */
+                    <ClientAggregationTable
+                      clientData={calculateClientAggregation()}
+                      projects={projects}
+                      onDeleteProject={deleteProject}
+                      showNotification={showNotification}
+                      loadingStates={loadingStates}
+                    />
                   ) : (
                     /* プロジェクト一覧テーブル */
                     <table className="min-w-full divide-y divide-gray-200 view-transition" role="table" aria-label="プロジェクト一覧テーブル">
@@ -1488,20 +1508,14 @@ function App() {
                                   </span>
                                 </td>
                                 <td className="px-2 sm:px-4 py-3 sm:py-4 whitespace-nowrap text-center">
-                                  <button
-                                    onClick={() => deleteProject(project.id)}
-                                    disabled={loadingStates.deleting[project.id]}
-                                    className="inline-flex items-center px-2 py-1 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 hover:text-red-800 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed delete-btn transition-all duration-200"
-                                    title={`プロジェクト「${project.title}」を削除`}
-                                  >
-                                    {loadingStates.deleting[project.id] && (
-                                      <span className="loading-spinner mr-1">🔄</span>
-                                    )}
-                                    {!loadingStates.deleting[project.id] && (
-                                      <span className="mr-1">🗑️</span>
-                                    )}
-                                    {loadingStates.deleting[project.id] ? '削除中...' : '削除'}
-                                  </button>
+                                  <DeleteButton
+                                    projectId={project.id}
+                                    projectTitle={project.title}
+                                    onDelete={() => openDeleteConfirmation(project.id, project)}
+                                    isLoading={loadingStates.deleting[project.id]}
+                                    size="sm"
+                                    variant="both"
+                                  />
                                 </td>
                               </tr>
                             )
@@ -1777,34 +1791,22 @@ function App() {
         </div>
       )}
 
-      {/* 通知システム */}
-      <div className="fixed top-4 right-4 z-50 space-y-2" role="region" aria-label="通知エリア" aria-live="polite">
-        {notifications.map((notification) => (
-          <div
-            key={notification.id}
-            className={`px-4 py-2 rounded-md shadow-lg text-white text-sm max-w-sm cursor-pointer transition-all duration-300 ${notification.type === 'error' ? 'bg-red-500' :
-                notification.type === 'success' ? 'bg-green-500' :
-                  notification.type === 'warning' ? 'bg-yellow-500' :
-                    'bg-blue-500'
-              }`}
-            onClick={() => removeNotification(notification.id)}
-          >
-            <div className="flex items-center justify-between">
-              <span>{notification.message}</span>
-              <button
-                className="ml-2 text-white hover:text-gray-200 focus:outline-none"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  removeNotification(notification.id)
-                }}
-                aria-label="通知を閉じる"
-              >
-                ✕
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
+      {/* 拡張通知システム */}
+      <NotificationSystem
+        notifications={notifications}
+        onRemoveNotification={removeNotification}
+      />
+
+      {/* 削除確認ダイアログ */}
+      <ConfirmationDialog
+        isOpen={deleteConfirmation.isOpen}
+        onClose={closeDeleteConfirmation}
+        onConfirm={confirmDelete}
+        title="プロジェクトの削除"
+        message="以下のプロジェクトを削除してもよろしいですか？"
+        projectDetails={deleteConfirmation.projectData}
+        isLoading={loadingStates.deleting[deleteConfirmation.projectId]}
+      />
     </div>
   )
 }

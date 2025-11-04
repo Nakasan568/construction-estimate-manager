@@ -299,23 +299,158 @@ html {
   }
 }
 
-/* Delete button styles */
+/* Enhanced Delete button styles */
 .delete-btn {
-  transition: all 0.2s ease;
+  position: relative;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(220, 38, 38, 0.1);
 }
 
 .delete-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.2);
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25);
 }
 
 .delete-btn:active {
-  transform: translateY(0);
+  transform: translateY(0) scale(0.98);
+  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.2);
 }
 
 .delete-btn:disabled {
   transform: none;
   box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* Delete button loading animation */
+.delete-btn-loading {
+  position: relative;
+  overflow: hidden;
+}
+
+.delete-btn-loading::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  animation: loading-shimmer 1.5s infinite;
+}
+
+@keyframes loading-shimmer {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+/* Delete button size variants */
+.delete-btn-sm {
+  min-width: 60px;
+  min-height: 28px;
+}
+
+.delete-btn-md {
+  min-width: 80px;
+  min-height: 36px;
+}
+
+.delete-btn-lg {
+  min-width: 100px;
+  min-height: 44px;
+}
+
+/* Responsive delete button adjustments */
+@media (max-width: 640px) {
+  .delete-btn-sm {
+    min-width: 50px;
+    min-height: 32px;
+    padding: 0.25rem 0.5rem;
+  }
+  
+  .delete-btn-md {
+    min-width: 60px;
+    min-height: 36px;
+    padding: 0.375rem 0.75rem;
+  }
+  
+  .delete-btn-lg {
+    min-width: 70px;
+    min-height: 40px;
+    padding: 0.5rem 1rem;
+  }
+  
+  /* Reduce animation intensity on mobile */
+  .delete-btn:hover {
+    transform: translateY(-1px) scale(1.01);
+  }
+  
+  /* Improve touch targets */
+  .delete-btn {
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 768px) {
+  .delete-btn:hover {
+    transform: translateY(-1px) scale(1.015);
+  }
+}
+
+/* Delete button danger gradient */
+.delete-btn-gradient {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 50%, #fecaca 100%);
+  border: 1px solid #fca5a5;
+}
+
+.delete-btn-gradient:hover {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 50%, #f87171 100%);
+  border-color: #f87171;
+}
+
+/* Delete button pulse effect for critical actions */
+.delete-btn-critical {
+  animation: danger-pulse 2s infinite;
+}
+
+@keyframes danger-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(220, 38, 38, 0);
+  }
+}
+
+/* Delete button focus improvements */
+.delete-btn:focus-visible {
+  outline: none;
+  ring: 2px;
+  ring-color: #dc2626;
+  ring-offset: 2px;
+  box-shadow: 0 0 0 2px #dc2626, 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+/* Delete button icon animations */
+.delete-btn-icon {
+  transition: all 0.2s ease;
+}
+
+.delete-btn:hover .delete-btn-icon {
+  transform: rotate(5deg) scale(1.1);
+}
+
+.delete-btn:active .delete-btn-icon {
+  transform: rotate(-5deg) scale(0.95);
 }
 
 /* Responsive design improvements */
@@ -365,6 +500,17 @@ html {
   .days-old-bg {
     border: 2px solid currentColor;
   }
+  
+  .delete-btn {
+    border: 2px solid #dc2626;
+    background: #ffffff;
+    color: #dc2626;
+  }
+  
+  .delete-btn:hover {
+    background: #dc2626;
+    color: #ffffff;
+  }
 }
 
 /* Reduced motion support */
@@ -383,6 +529,18 @@ html {
   
   .view-transition {
     animation: none;
+  }
+  
+  .delete-btn-critical {
+    animation: none;
+  }
+  
+  .loading-shimmer {
+    animation: none;
+  }
+  
+  .delete-btn:hover {
+    transform: none;
   }
 }
 
@@ -467,4 +625,229 @@ html {
 
 .sort-header:hover .sort-icon {
   transform: scale(1.2);
+}
+
+/* Confirmation Dialog styles */
+.dialog-backdrop {
+  backdrop-filter: blur(4px);
+  animation: fadeIn 0.2s ease-out;
+}
+
+.dialog-content {
+  animation: slideIn 0.2s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Dialog focus trap styles */
+.dialog-focus-trap {
+  position: relative;
+}
+
+.dialog-focus-trap:focus-within {
+  outline: none;
+}
+
+/* Dialog button styles */
+.dialog-button-cancel {
+  transition: all 0.2s ease;
+}
+
+.dialog-button-cancel:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.dialog-button-confirm {
+  transition: all 0.2s ease;
+}
+
+.dialog-button-confirm:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+/* Dialog warning box styles */
+.dialog-warning {
+  border-left: 4px solid #f59e0b;
+}
+
+/* Dialog project details styles */
+.dialog-project-details {
+  background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+  border: 1px solid #e5e7eb;
+}
+
+/* Enhanced Notification System styles */
+.notification-container {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 50;
+  max-width: 24rem;
+}
+
+.notification-item {
+  transform: translateX(100%);
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.notification-item.show {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.notification-item.hide {
+  transform: translateX(100%) scale(0.95);
+  opacity: 0;
+}
+
+/* Notification progress bar animation */
+@keyframes progress {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+
+.animate-progress {
+  animation: progress linear forwards;
+}
+
+/* Notification hover effects */
+.notification-item:hover {
+  transform: translateX(-4px) scale(1.02);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.notification-item:hover .animate-progress {
+  animation-play-state: paused;
+}
+
+/* Notification type specific styles */
+.notification-success {
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border-color: #10b981;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+}
+
+.notification-error {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border-color: #ef4444;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);
+}
+
+.notification-warning {
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border-color: #f59e0b;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15);
+}
+
+.notification-info {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border-color: #3b82f6;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+/* Delete notification specific styles */
+.notification-delete-success {
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border-left: 4px solid #10b981;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+}
+
+.notification-delete-error {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border-left: 4px solid #ef4444;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+}
+
+/* Notification stacking effect */
+.notification-item:nth-child(1) {
+  z-index: 50;
+}
+
+.notification-item:nth-child(2) {
+  z-index: 49;
+  transform: translateX(0) translateY(4px) scale(0.98);
+}
+
+.notification-item:nth-child(3) {
+  z-index: 48;
+  transform: translateX(0) translateY(8px) scale(0.96);
+}
+
+.notification-item:nth-child(n+4) {
+  display: none;
+}
+
+/* Responsive notification adjustments */
+@media (max-width: 640px) {
+  .notification-container {
+    top: 0.5rem;
+    right: 0.5rem;
+    left: 0.5rem;
+    max-width: none;
+  }
+  
+  .notification-item {
+    margin-bottom: 0.5rem;
+  }
+  
+  .notification-item:hover {
+    transform: translateX(0) scale(1.01);
+  }
+}
+
+/* Notification accessibility improvements */
+.notification-item[role="alert"] {
+  border-radius: 0.5rem;
+  position: relative;
+}
+
+.notification-item:focus-within {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* High contrast mode support for notifications */
+@media (prefers-contrast: high) {
+  .notification-success,
+  .notification-error,
+  .notification-warning,
+  .notification-info,
+  .notification-delete-success,
+  .notification-delete-error {
+    border: 2px solid currentColor;
+    background: white;
+  }
+}
+
+/* Reduced motion support for notifications */
+@media (prefers-reduced-motion: reduce) {
+  .notification-item {
+    transition: opacity 0.2s ease;
+    transform: none !important;
+  }
+  
+  .notification-item:hover {
+    transform: none !important;
+  }
+  
+  .animate-progress {
+    animation: none;
+    width: 0;
+  }
 }
